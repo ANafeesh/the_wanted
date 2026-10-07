@@ -36,7 +36,7 @@ export default function CategoryTiles({ products = [], onSelectCategory }) {
   return (
     <section
       id="shop-by-category"
-      className="py-14 md:py-20 bg-[#f4f2ee] border-t border-[#dcd8d2] text-[#0a0a0b]"
+      className="py-14 md:py-20 bg-[#f4f2ee] border-t border-[#dcd8d2] text-[#0a0a0b] scroll-mt-[72px] sm:scroll-mt-20 md:scroll-mt-[84px]"
       aria-label="Shop By Category"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

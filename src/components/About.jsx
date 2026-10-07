@@ -10,7 +10,7 @@ export default function About() {
   const { about, fulfillment } = siteContent;
 
   return (
-    <section id="about" className="py-14 md:py-20 bg-[#f4f2ee] border-t border-[#dcd8d2] text-[#0a0a0b]" aria-label="About The Outlet">
+    <section id="about" className="py-14 md:py-20 bg-[#f4f2ee] border-t border-[#dcd8d2] text-[#0a0a0b] scroll-mt-[72px] sm:scroll-mt-20 md:scroll-mt-[84px]" aria-label="About The Outlet">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           title={about.title}

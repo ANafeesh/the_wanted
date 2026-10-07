@@ -197,7 +197,7 @@ export default function NewArrivals({ onOpenQuickView, onAddToCart }) {
       ref={sectionRef}
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      className="relative w-full bg-[#f4f2ee] text-[#0a0a0b] select-none focus-visible:outline-2 focus-visible:outline-[#e0261f]"
+      className="relative w-full bg-[#f4f2ee] text-[#0a0a0b] select-none focus-visible:outline-2 focus-visible:outline-[#e0261f] scroll-mt-[72px] sm:scroll-mt-20 md:scroll-mt-[84px]"
       aria-label="New Arrivals Interactive Showcase"
     >
       {/* 

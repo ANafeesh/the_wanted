@@ -107,7 +107,7 @@ export default function OrderTracking({ config = null, initialReference = '' }) 
   const isReturned = trackedOrder?.status === 'returned';
 
   return (
-    <section id="track-order" className="py-14 md:py-20 bg-[#f4f2ee] border-t border-[#dcd8d2] text-[#0a0a0b]" aria-label="Track Your Order">
+    <section id="track-order" className="py-14 md:py-20 bg-[#f4f2ee] border-t border-[#dcd8d2] text-[#0a0a0b] scroll-mt-[72px] sm:scroll-mt-20 md:scroll-mt-[84px]" aria-label="Track Your Order">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           title={siteContent.tracking.title}
