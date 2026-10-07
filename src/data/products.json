@@ -1,0 +1,92 @@
+[
+  {
+    "id": "tw-hd-01",
+    "name": "Grey hoodie",
+    "category": "Hoodies",
+    "price": 6900,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["hoodie-grey-1.webp"],
+    "description": "Heavyweight French terry relaxed fit hoodie with ribbed cuffs and hem.",
+    "sample": true
+  },
+  {
+    "id": "tw-bj-02",
+    "name": "Black bomber jacket",
+    "category": "Bomber jackets",
+    "price": 10800,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["bomber-jacket-black-1.webp"],
+    "description": "Insulated nylon bomber jacket with full front metal zipper and utility arm pocket.",
+    "sample": true
+  },
+  {
+    "id": "tw-dj-03",
+    "name": "Blue denim jacket",
+    "category": "Denim jackets",
+    "price": 9500,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["denim-jacket-blue-1.webp", "denim-jacket-blue-2.webp"],
+    "description": "Classic wash denim jacket with dual chest flap pockets and button front closure.",
+    "sample": true
+  },
+  {
+    "id": "tw-te-04",
+    "name": "White t-shirt",
+    "category": "T-shirts",
+    "price": 3200,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["tshirt-white-1.webp"],
+    "description": "Heavy combed cotton crewneck t-shirt with reinforced neckline.",
+    "sample": true
+  },
+  {
+    "id": "tw-cp-05",
+    "name": "Black cargo pants",
+    "category": "Cargo pants",
+    "price": 7900,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["cargo-pants-black-1.webp"],
+    "description": "Relaxed fit cargo pants with dual side utility pockets and drawstring ankles.",
+    "sample": true
+  },
+  {
+    "id": "tw-jn-06",
+    "name": "Blue jeans",
+    "category": "Jeans",
+    "price": 8500,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["jeans-blue-1.webp"],
+    "description": "Straight leg blue denim jeans with 5-pocket construction and copper rivets.",
+    "sample": true
+  },
+  {
+    "id": "tw-wb-07",
+    "name": "Black windbreaker jacket",
+    "category": "Windbreakers",
+    "price": 8900,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["windbreaker-black-1.webp", "windbreaker-black-2.webp"],
+    "description": "Lightweight water-resistant windbreaker jacket with zip closure and adjustable hood.",
+    "sample": true
+  },
+  {
+    "id": "tw-kw-08",
+    "name": "Neutral knit sweater",
+    "category": "Knitwear",
+    "price": 7200,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["knitwear-neutral-1.webp", "knitwear-neutral-2.webp"],
+    "description": "Crewneck ribbed knit sweater in natural unbleached wool blend.",
+    "sample": true
+  },
+  {
+    "id": "tw-sw-09",
+    "name": "Grey sweatshirt",
+    "category": "Sweatshirts",
+    "price": 5900,
+    "sizes": ["S", "M", "L", "XL"],
+    "images": ["sweatshirt-grey-1.webp"],
+    "description": "Classic crewneck sweatshirt with dropped shoulders and ribbed trims.",
+    "sample": true
+  }
+]

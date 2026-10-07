@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page-bg: #f4f2ee;
+  --color-card-white: #ffffff;
+  --color-text-ink: #0a0a0b;
+  --color-text-muted: #5c5a5e;
+  --color-border-light: #dcd8d2;
+  --color-brand-red: #e0261f;
+  --color-star-orange: #f58b25;
+
+  /* Convenience aliases */
+  --color-ink: #0a0a0b;
+  --color-bg: #f4f2ee;
+  --color-panel: #ffffff;
+  --color-line: #dcd8d2;
+  --color-mute: #5c5a5e;
+  --color-brand: #e0261f;
+  --color-star: #f58b25;
+
+  --font-display: "Anton", sans-serif;
+  --font-body: "Work Sans", sans-serif;
+}
+
+/* Strict square corners everywhere */
+*, *::before, *::after {
+  border-radius: 0 !important;
+}
+
+html {
+  background-color: #0a0a0b;
+  color: #0a0a0b;
+  font-family: "Work Sans", sans-serif;
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #0a0a0b;
+  color: #0a0a0b;
+  overflow-x: hidden;
+  min-height: 100dvh;
+}
+
+/* Accessible visible keyboard focus states */
+:focus-visible {
+  outline: 2px solid #e0261f !important;
+  outline-offset: 2px !important;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f4f2ee;
+}
+::-webkit-scrollbar-thumb {
+  background: #dcd8d2;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #e0261f;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Dark Marquee Animation */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+    transform: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Touch vs Mouse device helper text */
+.touch-helper {
+  display: none;
+}
+.mouse-helper {
+  display: inline;
+}
+
+@media (pointer: coarse) {
+  .touch-helper {
+    display: inline !important;
+  }
+  .mouse-helper {
+    display: none !important;
+  }
+}
