@@ -18,6 +18,19 @@ dist-ssr/
 .env
 .env*.local
 
+# SQLite Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/dev.db
+prisma/dev.db-journal
+
+# Uploads
+/uploads
+uploads/
+
+
 # OS / Editor files
 .DS_Store
 Thumbs.db

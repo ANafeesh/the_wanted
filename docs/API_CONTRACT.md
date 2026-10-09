@@ -1,14 +1,13 @@
-# The Wanted — Backend API Contract
+# The Wanted — Backend API Contract & Specification
 
-This document defines the formal API contract between **The Wanted** front-end application and the upcoming **Node.js backend**.
+This document defines the formal API contract between **The Wanted** front-end application and the **Node.js Express backend**.
 
-The front-end accesses all backend resources through the service layer in [`src/services/api.js`](file:///d:/Shop/the-wanted/src/services/api.js).
-- When `VITE_API_URL` is set in the environment (`.env`), the service makes standard HTTP JSON requests to the endpoints documented below.
-- When `VITE_API_URL` is not set, the service falls back to local data mocks (`products.json`, `content.js`, and versioned `localStorage`).
+Base API path: `/api`
+All endpoints accept and return UTF-8 JSON payloads with `Content-Type: application/json` unless otherwise noted (such as multipart file uploads).
 
 ---
 
-## 1. Data Models & Payloads
+## 1. Public Data Models & Payloads
 
 ### 1.1 Product Object (`Product`)
 
@@ -17,24 +16,25 @@ interface Product {
   id: string;               // Unique product identifier (e.g., "tw-hd-01")
   name: string;             // Display name (e.g., "Grey hoodie")
   category: string;         // Department name (e.g., "Hoodies", "Jeans", "T-Shirts")
-  price: number;            // Outlet selling price in LKR (Rs.)
-  originalPrice?: number;   // Optional. Original retail price in LKR (renders crossed-out price + discount badge)
+  price: number;            // Outlet selling price in whole LKR (Rs.)
+  originalPrice?: number;   // Optional original retail price in LKR
   sizes: string[];          // Available sizes (e.g., ["S", "M", "L", "XL"])
-  images: string[];         // Image filenames or absolute URL paths (e.g., ["hoodie-grey-1.webp"])
+  images: string[];         // Image filenames in /uploads or static product assets
   description?: string;     // Product fabric, fit, and construction details
   sample?: boolean;         // Optional flag: if true, displays "Sample photo" tag
+  active: boolean;          // Active status flag (public GET /products only returns active: true)
 }
 ```
 
 ---
 
-### 1.2 Store Configuration (`Config`)
+### 1.2 Store Configuration (`StoreConfig`)
 
-Fetched via `GET /config` or provided locally via `defaultConfig` in [`src/data/content.js`](file:///d:/Shop/the-wanted/src/data/content.js).
+Fetched via `GET /api/config` or provided locally via `defaultConfig`:
 
 ```typescript
 interface StoreConfig {
-  shippingFee: number;                  // Shipping fee in LKR for postal delivery (default 0)
+  shippingFee: number;                  // Shipping fee in whole LKR for postal delivery (default 0)
   freeShippingThreshold: number | null; // Order subtotal threshold for free shipping, or null if none
   estimatedDelivery: string;            // Estimated postal delivery window (default "To be confirmed")
   enabledPaymentMethods: {
@@ -62,97 +62,57 @@ interface StoreConfig {
 
 ```typescript
 interface CreateOrderRequest {
-  fulfillment: "post" | "pickup";       // Required. Delivery method
+  fulfillment: "post" | "pickup";       // Required delivery method
   customer: {
-    name: string;                       // Required. Customer full name
-    phone: string;                      // Required. Sri Lankan phone number (e.g., "0771234567" or "+94 77 123 4567")
-    address?: string;                   // Required ONLY when fulfillment === "post"
-    city?: string;                      // Required ONLY when fulfillment === "post"
-    postalCode?: string;                // Required ONLY when fulfillment === "post". Exactly 5 digits
-    district?: string;                  // Required ONLY when fulfillment === "post". One of Sri Lanka's 25 districts
+    name: string;                       // Required (2 to 80 characters)
+    phone: string;                      // Required Sri Lankan mobile number (07XXXXXXXX, +947XXXXXXXX, 947XXXXXXXX)
+    address?: string;                   // Required ONLY for "post" (5 to 200 characters)
+    city?: string;                      // Required ONLY for "post" (2 to 60 characters)
+    postalCode?: string;                // Required ONLY for "post" (exactly 5 digits)
+    district?: string;                  // Required ONLY for "post" (one of Sri Lanka's 25 districts)
   };
   paymentMethod: "cod" | "bank_transfer" | "pay_at_shop";
   items: Array<{
     productId: string;                  // Unique product identifier
-    size: string;                       // Selected size
-    quantity: number;                   // Positive integer >= 1
-  }>;
-  notes?: string;                       // Optional customer or delivery notes
+    size: string;                       // Selected size (must be offered by product)
+    quantity: number;                   // Positive integer (1 to 10)
+  }>;                                   // Max 20 line items
+  notes?: string;                       // Optional customer note (up to 300 characters)
 }
 ```
 
 #### Fulfillment & Payment Constraints:
-- `address`, `city`, `postalCode`, and `district` are sent **only** when `fulfillment === "post"`.
-- `cod` (Cash on delivery) is allowed **only** when `fulfillment === "post"`.
-- `pay_at_shop` (Pay at the shop) is allowed **only** when `fulfillment === "pickup"`.
-- `bank_transfer` is allowed with either fulfillment method (when enabled in config).
-- Never accept client-submitted prices, discounts, fees, or total values.
-
-#### Example Post Order Request JSON:
-```json
-{
-  "fulfillment": "post",
-  "customer": {
-    "name": "Kasun Perera",
-    "phone": "0771234567",
-    "address": "14 Galle Road",
-    "city": "Colombo",
-    "postalCode": "00300",
-    "district": "Colombo"
-  },
-  "paymentMethod": "cod",
-  "items": [
-    {
-      "productId": "tw-hd-01",
-      "size": "M",
-      "quantity": 1
-    }
-  ],
-  "notes": "Please call before arrival"
-}
-```
-
-#### Example Pickup Order Request JSON:
-```json
-{
-  "fulfillment": "pickup",
-  "customer": {
-    "name": "Dilshan Fernando",
-    "phone": "+94 71 987 6543"
-  },
-  "paymentMethod": "pay_at_shop",
-  "items": [
-    {
-      "productId": "tw-jk-03",
-      "size": "L",
-      "quantity": 1
-    }
-  ],
-  "notes": "Will collect on Saturday morning"
-}
-```
+- `fulfillment === "post"`:
+  - Requires `address`, `city`, `postalCode` (5 digits), and `district` (one of the 25 administrative districts).
+  - Allowed payment methods: `"cod"` and `"bank_transfer"` (when enabled in config).
+  - `"pay_at_shop"` is rejected with `400 INVALID_INPUT`.
+- `fulfillment === "pickup"`:
+  - Must not store address fields.
+  - Allowed payment methods: `"pay_at_shop"` and `"bank_transfer"` (when enabled in config).
+  - `"cod"` is rejected with `400 INVALID_INPUT`.
+- Disabled payment methods return `400 PAYMENT_METHOD_UNAVAILABLE`.
 
 ---
 
 ### 1.4 Order Response (`CreateOrderResponse`)
 
-Returned by `POST /orders`:
+Returned by `POST /api/orders` (HTTP 201):
 
 ```typescript
 interface CreateOrderResponse {
-  reference: string;                    // Order reference number (e.g., "TW-784291")
+  reference: string;                    // Unique reference (e.g., "TW-784291")
   fulfillment: "post" | "pickup";       // Fulfillment type
-  status: OrderStatus;                  // Initial status: "pending"
-  paymentStatus: "unpaid" | "paid";     // Payment status ("unpaid" for COD / Pay at shop / pending transfer)
-  subtotal: number;                     // Server-computed items subtotal in LKR
-  shippingFee: number;                  // Server-computed shipping fee in LKR
-  total: number;                        // Server-computed grand total in LKR (subtotal + shippingFee)
+  status: "pending";                    // Initial status
+  paymentStatus: "unpaid";              // Initial payment status
+  subtotal: number;                     // Server-computed items subtotal in whole LKR
+  shippingFee: number;                  // Server-computed shipping fee in whole LKR
+  total: number;                        // Server-computed grand total in whole LKR
   items: Array<{
     productId: string;
     name: string;
     size: string;
     quantity: number;
-    unitPrice: number;                  // Server price per unit
+    unitPrice: number;                  // Recorded unit price at time of purchase
   }>;
   paymentMethod: "cod" | "bank_transfer" | "pay_at_shop";
   bankTransferInstructions: string;     // Instructions if paymentMethod === "bank_transfer", else ""
@@ -162,134 +122,123 @@ interface CreateOrderResponse {
 
 ---
 
-### 1.5 Order Status Lifecycle by Fulfillment
+### 1.5 Order Status Lifecycle & Rules
 
-#### For `fulfillment: "post"`
-- `pending`: Order received, awaiting confirmation.
-- `confirmed`: Order confirmed by outlet team.
-- `packed`: Garments inspected, tagged, and packed into parcel.
-- `posted`: Parcel handed over to post office / postal courier service.
-- `delivered`: Parcel successfully delivered to customer address.
-- `cancelled`: Order cancelled.
-- `returned`: Parcel could not be delivered and was returned to shop.
+#### Postal Delivery (`fulfillment: "post"`):
+- Statuses: `pending`, `confirmed`, `packed`, `posted`, `delivered`, `cancelled`, `returned`
+- Allowed transitions:
+  - `pending` -> `confirmed` | `cancelled`
+  - `confirmed` -> `packed` | `cancelled`
+  - `packed` -> `posted` | `cancelled`
+  - `posted` -> `delivered` | `returned`
+- Terminal: `delivered`, `cancelled`, `returned`
 
-#### For `fulfillment: "pickup"`
-- `pending`: Order received, awaiting inventory reservation.
-- `confirmed`: Order confirmed and garments reserved on floor.
-- `ready_for_pickup`: Garments ready at the counter for customer collection.
-- `collected`: Customer has collected order and completed payment (if due).
-- `cancelled`: Order cancelled.
+#### Shop Collection (`fulfillment: "pickup"`):
+- Statuses: `pending`, `confirmed`, `ready_for_pickup`, `collected`, `cancelled`
+- Allowed transitions:
+  - `pending` -> `confirmed` | `cancelled`
+  - `confirmed` -> `ready_for_pickup` | `cancelled`
+  - `ready_for_pickup` -> `collected` | `cancelled`
+- Terminal: `collected`, `cancelled`
 
-#### Payment Statuses:
-- `unpaid`: Payment pending (COD, Pay at shop, or pending bank transfer verification).
-- `paid`: Payment received and verified.
+#### Critical Business Rules:
+1. **Invalid Moves**: Return `409 INVALID_STATUS_TRANSITION`.
+2. **Bank Transfer Requirement**: Orders with `paymentMethod === "bank_transfer"` cannot move to `packed` (post) or `ready_for_pickup` (pickup) until `paymentStatus === "paid"`. Returns `409 PAYMENT_REQUIRED`.
+3. **Automatic Payment Marking**:
+   - `cod` orders automatically become `paymentStatus: "paid"` when transitioning to `delivered`.
+   - `pay_at_shop` orders automatically become `paymentStatus: "paid"` when transitioning to `collected`.
+4. **Timestamps**: `postedAt`, `readyAt`, `deliveredAt`, `collectedAt` are automatically set upon entering those respective statuses.
+5. **Tracking Number**: Can only be assigned when status is `packed` (automatically moves status to `posted` and sets `postedAt`) or `posted` (edits tracking number). Format: 3 to 40 alphanumeric chars or dashes (`/^[A-Za-z0-9\-]{3,40}$/`).
 
 ---
 
-### 1.6 Tracking Status Response (`TrackedOrderResponse`)
+### 1.6 Public Tracking Response (`TrackedOrderResponse`)
 
-Returned by `GET /orders/:reference?phone=...`:
+Returned by `GET /api/orders/:reference?phone=07XXXXXXXX`:
+
+> **PRIVACY NOTE:** Customer delivery address and contact details are omitted in public tracking responses to safeguard customer privacy.
 
 ```typescript
-interface TrackedOrderResponse extends CreateOrderResponse {
-  customer: {
+interface TrackedOrderResponse {
+  reference: string;
+  fulfillment: "post" | "pickup";
+  status: string;
+  paymentStatus: "unpaid" | "paid";
+  paymentMethod: "cod" | "bank_transfer" | "pay_at_shop";
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  items: Array<{
+    productId: string;
     name: string;
-    phone: string;
-    address?: string;
-    city?: string;
-    postalCode?: string;
-    district?: string;
-  };
-  trackingNumber: string | null;        // Postal tracking barcode / ID (when posted)
-  trackingUrl: string | null;           // Direct tracking URL for post office (nullable)
-  postedAt: string | null;              // Timestamp when posted
-  readyAt: string | null;               // Timestamp when ready for pickup
-  deliveredAt: string | null;           // Timestamp when delivered
-  collectedAt: string | null;           // Timestamp when collected
+    size: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+  trackingNumber: string | null;        // Postal tracking number
+  trackingUrl: string | null;           // Built from TRACKING_URL_TEMPLATE, or null
+  postedAt: string | null;
+  readyAt: string | null;
+  deliveredAt: string | null;
+  collectedAt: string | null;
+  createdAt: string;
 }
 ```
 
 ---
 
-## 2. API Endpoints
+## 2. API Endpoints Reference
 
-All endpoints accept and return UTF-8 JSON payloads with `Content-Type: application/json`.
+### 2.1 Public Endpoints
 
-### 2.1 Get Store Configuration
-- **HTTP Method**: `GET`
-- **Path**: `/config`
-- **Response**: `200 OK`
-```json
-{
-  "shippingFee": 0,
-  "freeShippingThreshold": null,
-  "estimatedDelivery": "To be confirmed",
-  "enabledPaymentMethods": {
-    "post": ["cod", "bank_transfer"],
-    "pickup": ["pay_at_shop", "bank_transfer"]
-  },
-  "bankTransferInstructions": "",
-  "shop": {
-    "address": "Shop address",
-    "hours": "Opening hours",
-    "phone": "+94 7X XXX XXXX",
-    "mapUrl": ""
-  },
-  "pickupNote": "We will contact you when your order is ready."
-}
-```
+| Method | Endpoint | Description | Rate Limit |
+|---|---|---|---|
+| `GET` | `/health` / `/api/health` | Health check (`{ status: "ok" }`) | General |
+| `GET` | `/api/config` | Retrieve active store settings | General |
+| `GET` | `/api/products` | Retrieve active products list | General |
+| `GET` | `/api/products/:id` | Retrieve single active product by ID | General |
+| `POST` | `/api/orders` | Place a customer order | 10 / hr / IP |
+| `GET` | `/api/orders/:reference?phone=...` | Track order by reference and customer phone | 20 / 15m / IP |
 
 ---
 
-### 2.2 Get All Products
-- **HTTP Method**: `GET`
-- **Path**: `/products`
-- **Response**: `200 OK`
-- **Response Body**: Array of `Product` objects.
+### 2.2 Admin Endpoints (Requires Authentication)
 
----
+All admin endpoints require an active session via the `admin_token` httpOnly cookie (or `Authorization: Bearer <token>`).
 
-### 2.3 Get Single Product
-- **HTTP Method**: `GET`
-- **Path**: `/products/:id`
-- **Response**:
-  - `200 OK`: Single `Product` object.
-  - `404 Not Found`: If no product matches `:id`.
-
----
-
-### 2.4 Create Order
-- **HTTP Method**: `POST`
-- **Path**: `/orders`
-- **Request Body**: `CreateOrderRequest`
-- **Response**:
-  - `201 Created`: `CreateOrderResponse`
-  - `400 Bad Request`: Input validation failed.
-  - `500 Internal Server Error`: Processing failed.
-
----
-
-### 2.5 Get Order Tracking Status
-- **HTTP Method**: `GET`
-- **Path**: `/orders/:reference?phone=07XXXXXXXX`
-- **Parameters**:
-  - `:reference` (path parameter): Order reference (e.g. `TW-784291`). Case-insensitive.
-  - `phone` (query parameter): Customer contact phone number used during checkout. Sri Lankan numbers normalized (leading 0, 94, +94).
-- **Response**:
-  - `200 OK`: `TrackedOrderResponse`
-  - `404 Not Found`: Reference not found or phone number does not match.
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/admin/login` | Admin login with `{ email, password }`. Sets 8-hour httpOnly cookie. (Limit: 5 / 15m) |
+| `POST` | `/api/admin/logout` | Clears authentication cookie. |
+| `GET` | `/api/admin/me` | Returns current admin profile. |
+| `GET` | `/api/admin/orders` | List orders (filters: `status`, `fulfillment`, `paymentStatus`, `search`, `page`, `limit`). Sorted newest first. |
+| `GET` | `/api/admin/orders/:reference` | Get detailed order by reference (including customer and notes). |
+| `PATCH` | `/api/admin/orders/:reference/status` | Update status: `{ status }`. Enforces status transitions and payment checks. |
+| `PATCH` | `/api/admin/orders/:reference/payment` | Update payment status: `{ paymentStatus: "paid" \| "unpaid" }`. |
+| `PATCH` | `/api/admin/orders/:reference/tracking` | Set/update tracking number: `{ trackingNumber }`. Auto-advances packed to posted. |
+| `GET` | `/api/admin/orders/:reference/label` | Get shipping label for postal orders: `{ reference, name, phone, address, city, district, postalCode, itemCount }` (No prices). |
+| `GET` | `/api/admin/products` | List all products (including inactive). |
+| `POST` | `/api/admin/products` | Create a new product. |
+| `PUT` | `/api/admin/products/:id` | Update an existing product. |
+| `DELETE` | `/api/admin/products/:id` | Soft delete product (sets `active: false`). |
+| `POST` | `/api/admin/upload` | Upload product image (JPG/PNG/WebP, max 8 MB, resized to max 1200px wide, converted to WebP). |
+| `GET` | `/api/admin/settings` | Get current store settings. |
+| `PUT` | `/api/admin/settings` | Update store settings. |
 
 ---
 
 ## 3. Standard Error Format
 
-When an error occurs (HTTP 4xx or 5xx), the response body MUST follow this uniform structure:
+All error responses strictly follow this format:
 
 ```json
 {
   "error": {
     "code": "STRING_ERROR_CODE",
-    "message": "Human-readable explanation of what went wrong"
+    "message": "Human-readable explanation of error",
+    "fields": {
+      "fieldName": "Specific validation failure explanation"
+    }
   }
 }
 ```
@@ -298,34 +247,31 @@ When an error occurs (HTTP 4xx or 5xx), the response body MUST follow this unifo
 
 | HTTP Status | Error Code | Description |
 |---|---|---|
-| `400` | `INVALID_INPUT` | Missing or invalid required fields (e.g., customer name). |
+| `400` | `INVALID_INPUT` | Input payload validation failed (includes `fields`). |
 | `400` | `INVALID_PHONE` | Phone number does not match Sri Lankan format. |
-| `400` | `INVALID_FULFILLMENT` | Fulfillment is not `"post"` or `"pickup"`. |
-| `400` | `INVALID_ADDRESS` | Missing address, city, postal code, or district for postal order. |
-| `400` | `INVALID_POSTAL_CODE` | Postal code is not exactly 5 digits. |
-| `400` | `INVALID_DISTRICT` | District is not one of the 25 Sri Lankan districts. |
-| `400` | `INVALID_PAYMENT_METHOD` | Payment method is not valid for the chosen fulfillment. |
-| `400` | `EMPTY_ORDER` | The `items` array is empty or invalid. |
-| `404` | `PRODUCT_NOT_FOUND` | Product ID does not exist. |
-| `404` | `ORDER_NOT_FOUND` | Order reference or phone verification did not match. |
-| `409` | `OUT_OF_STOCK` | Requested product or size is unavailable. |
-| `500` | `INTERNAL_SERVER_ERROR` | Server execution error. |
+| `400` | `INVALID_SIZE` | Product does not offer the requested size. |
+| `400` | `PAYMENT_METHOD_UNAVAILABLE` | Payment method is disabled in store settings. |
+| `400` | `NOT_A_POSTAL_ORDER` | Requested shipping label on a shop pickup order. |
+| `400` | `INVALID_FILE_TYPE` | Uploaded file is not a supported image format. |
+| `400` | `FILE_TOO_LARGE` | Uploaded image exceeds 8 MB size limit. |
+| `401` | `UNAUTHORIZED` | Authentication required or token expired. |
+| `401` | `INVALID_CREDENTIALS` | Invalid email or password provided during login. |
+| `404` | `PRODUCT_NOT_FOUND` | Product ID does not exist or is inactive. |
+| `404` | `ORDER_NOT_FOUND` | Order reference not found or phone does not match. |
+| `409` | `INVALID_STATUS_TRANSITION` | Disallowed status lifecycle transition. |
+| `409` | `PAYMENT_REQUIRED` | Bank transfer order must be marked as paid before packing/ready for pickup. |
+| `429` | `RATE_LIMIT_EXCEEDED` | Request throttled by rate limiter. |
+| `500` | `INTERNAL_SERVER_ERROR` | Server execution error (internal details hidden). |
 
 ---
 
-## 4. Environment & Deployment Setup
+## 4. Summary of Differences from Previous Front-End Contract Copy
 
-To point the front-end to your Node.js backend:
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Set `VITE_API_URL` to your backend URL:
-   ```env
-   VITE_API_URL=http://localhost:5000/api
-   ```
-3. Build or start the application:
-   ```bash
-   npm run build
-   ```
-No front-end code changes are needed when switching between local mock mode and the remote backend.
+1. **Active Flag & Product Visibility**:
+   `Product` includes an `active: boolean` field. Public endpoint `GET /products` returns only active products. Admin endpoint `GET /admin/products` returns both active and inactive, and `DELETE /admin/products/:id` performs soft deletion by setting `active: false`.
+2. **Customer Privacy in Public Tracking**:
+   The public `GET /orders/:reference?phone=...` endpoint returns the order details without the nested customer personal address and phone data to protect customer privacy on public networks.
+3. **Comprehensive Admin Endpoints**:
+   Added complete specifications for admin authentication, order management, status transitions, shipping labels, product catalog CRUD, image uploads, and settings configuration.
+4. **Sri Lankan Phone & District Validation**:
+   Formalized phone validation accepting `07XXXXXXXX`, `+947XXXXXXXX`, or `947XXXXXXXX` normalized to `947XXXXXXXX`, and postal delivery validation requiring one of Sri Lanka's 25 administrative districts.

@@ -1,0 +1,92 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Settings {
+  id                          Int      @id @default(1)
+  shippingFee                 Int      @default(0)
+  freeShippingThreshold       Int?
+  estimatedDelivery           String   @default("To be confirmed")
+  enabledPaymentMethodsPost   String   @default("cod,bank_transfer")
+  enabledPaymentMethodsPickup String   @default("pay_at_shop,bank_transfer")
+  bankTransferInstructions    String   @default("")
+  shopAddress                 String   @default("Shop address")
+  shopHours                   String   @default("Opening hours")
+  shopPhone                   String   @default("+94 7X XXX XXXX")
+  shopMapUrl                  String   @default("")
+  pickupNote                  String   @default("We will contact you when your order is ready.")
+  updatedAt                   DateTime @updatedAt
+}
+
+model Product {
+  id            String      @id
+  name          String
+  category      String
+  price         Int
+  originalPrice Int?
+  sizes         String      // JSON array of strings
+  images        String      // JSON array of strings
+  description   String?
+  sample        Boolean     @default(false)
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id                       String      @id @default(uuid())
+  reference                String      @unique
+  fulfillment              String      // "post" | "pickup"
+  status                   String      // "pending", "confirmed", etc.
+  paymentStatus            String      // "unpaid" | "paid"
+  paymentMethod            String      // "cod" | "bank_transfer" | "pay_at_shop"
+  customerName             String
+  customerPhone            String      // normalized: 947XXXXXXXX
+  customerAddress          String?
+  customerCity             String?
+  customerPostalCode       String?
+  customerDistrict         String?
+  notes                    String?
+  subtotal                 Int
+  shippingFee              Int
+  total                    Int
+  trackingNumber           String?
+  bankTransferInstructions String?
+  postedAt                 DateTime?
+  readyAt                  DateTime?
+  deliveredAt              DateTime?
+  collectedAt              DateTime?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  items                    OrderItem[]
+
+  @@index([reference])
+  @@index([createdAt])
+  @@index([customerPhone])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  size      String
+  quantity  Int
+  unitPrice Int
+}
